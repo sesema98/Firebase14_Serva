@@ -1,0 +1,9 @@
+.DS_Store
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+
+# Firebase local config
+GoogleService-Info.plist
+Lab14IntroFirebaseServa/GoogleService-Info.plist
