@@ -25,7 +25,6 @@ struct Lab14IntroFirebaseServaApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
-        // Initializes Firebase services using the bundled GoogleService-Info.plist.
         FirebaseApp.configure()
     }
 

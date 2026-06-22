@@ -22,6 +22,7 @@ final class DatabaseService: ObservableObject {
     @Published var errorMessage: String?
 
     private let messagesCollection: CollectionReference
+    private let profileService = UserProfileService()
     private var messagesListener: ListenerRegistration?
 
     init() {
@@ -36,43 +37,43 @@ final class DatabaseService: ObservableObject {
         messagesListener = messagesCollection
             .order(by: "timestamp", descending: false)
             .addSnapshotListener { [weak self] snapshot, error in
-            guard let self else {
-                return
-            }
+                guard let self else {
+                    return
+                }
 
-            if let error {
+                if let error {
+                    DispatchQueue.main.async {
+                        self.errorMessage = Self.userFacingMessage(for: error)
+                    }
+                    return
+                }
+
+                guard let documents = snapshot?.documents else {
+                    return
+                }
+
+                let parsedMessages = documents.compactMap { document -> ChatMessage? in
+                    let data = document.data()
+                    guard
+                        let email = data["email"] as? String,
+                        let text = data["text"] as? String
+                    else {
+                        return nil
+                    }
+
+                    return ChatMessage(
+                        id: document.documentID,
+                        email: email,
+                        text: text,
+                        sentAt: (data["timestamp"] as? Timestamp)?.dateValue() ?? .distantPast
+                    )
+                }
+                .sorted { $0.sentAt < $1.sentAt }
+
                 DispatchQueue.main.async {
-                    self.errorMessage = Self.userFacingMessage(for: error)
+                    self.messages = parsedMessages
                 }
-                return
             }
-
-            guard let documents = snapshot?.documents else {
-                return
-            }
-
-            let parsedMessages = documents.compactMap { document -> ChatMessage? in
-                let data = document.data()
-                guard
-                    let email = data["email"] as? String,
-                    let text = data["text"] as? String
-                else {
-                    return nil
-                }
-
-                return ChatMessage(
-                    id: document.documentID,
-                    email: email,
-                    text: text,
-                    sentAt: (data["timestamp"] as? Timestamp)?.dateValue() ?? .distantPast
-                )
-            }
-            .sorted { $0.sentAt < $1.sentAt }
-
-            DispatchQueue.main.async {
-                self.messages = parsedMessages
-            }
-        }
     }
 
     func stopListening() {
@@ -103,9 +104,11 @@ final class DatabaseService: ObservableObject {
                 if let error {
                     self?.errorMessage = Self.userFacingMessage(for: error)
                     completion(.failure(error))
-                } else {
-                    completion(.success(()))
+                    return
                 }
+
+                self?.profileService.incrementMessageCountIfProfileExists()
+                completion(.success(()))
             }
         }
     }
@@ -114,7 +117,7 @@ final class DatabaseService: ObservableObject {
         let message = error.localizedDescription
 
         if message.localizedCaseInsensitiveContains("permission denied") {
-            return "Firebase rechazo la operacion por reglas de Cloud Firestore. Verifica que tus reglas permitan leer y escribir con request.auth != null."
+            return "Firebase rechazó la operación por reglas de Cloud Firestore. Verifica que tus reglas permitan leer y escribir con request.auth != null."
         }
 
         if message.localizedCaseInsensitiveContains("network")

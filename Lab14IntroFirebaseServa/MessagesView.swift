@@ -15,6 +15,7 @@ struct MessagesView: View {
     @StateObject private var databaseService = DatabaseService()
     @State private var messageText = ""
     @State private var showError = false
+    @State private var showingProfile = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -24,7 +25,7 @@ struct MessagesView: View {
                 ContentUnavailableView(
                     "Sin mensajes",
                     systemImage: "ellipsis.message",
-                    description: Text("Escribe el primer mensaje para probar Firebase Database.")
+                    description: Text("Escribe el primer mensaje para probar Firebase y luego revisa el Profile.")
                 )
                 .frame(maxHeight: .infinity)
             } else {
@@ -50,7 +51,6 @@ struct MessagesView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .navigationTitle("Mensajes")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             databaseService.startListening()
@@ -61,40 +61,70 @@ struct MessagesView: View {
         .onChange(of: databaseService.errorMessage) { _, newValue in
             showError = newValue != nil
         }
-        .alert("Firebase Database", isPresented: $showError) {
+        .alert("Firebase", isPresented: $showError) {
             Button("OK") {
                 databaseService.errorMessage = nil
             }
         } message: {
-            Text(databaseService.errorMessage ?? "Ocurrio un error al usar Firebase Database.")
+            Text(databaseService.errorMessage ?? "Ocurrió un error al usar Firebase.")
+        }
+        .sheet(isPresented: $showingProfile) {
+            NavigationStack {
+                UserProfileView()
+            }
         }
     }
 
     private var header: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Usuario autenticado")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Messages")
+                        .font(.title2)
+                        .fontWeight(.bold)
 
-                Text(currentUser.email ?? "sin-correo@firebase.local")
-                    .font(.headline)
+                    Text(currentUser.email ?? "sin-correo@firebase.local")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                NavigationLink(destination: QueryTestView()) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.title3)
+                        .foregroundStyle(.blue)
+                        .frame(width: 36, height: 36)
+                        .background(Color.blue.opacity(0.12))
+                        .clipShape(Circle())
+                }
             }
 
-            Spacer()
+            HStack(spacing: 12) {
+                Button("Profile") {
+                    showingProfile = true
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.blue)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            Button("Sign Out", action: onSignOut)
-                .buttonStyle(SignOutButtonStyle())
+                Spacer()
+
+                Button("Sign Out", action: onSignOut)
+                    .buttonStyle(SignOutButtonStyle())
+            }
         }
     }
 
     private var composer: some View {
         HStack(spacing: 12) {
-            TextField("Escribe un mensaje", text: $messageText, axis: .vertical)
+            TextField("Type a message...", text: $messageText, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1 ... 4)
 
-            Button("Enviar") {
+            Button("Send") {
                 let currentText = messageText
                 databaseService.sendMessage(text: currentText, from: currentUser) { result in
                     if case .success = result {
@@ -104,6 +134,7 @@ struct MessagesView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .frame(width: 110)
+            .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(.bottom, 12)
     }
@@ -114,4 +145,8 @@ struct MessagesView: View {
         formatter.timeStyle = .short
         return formatter
     }()
+}
+
+#Preview {
+    AuthView()
 }

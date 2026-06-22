@@ -2,6 +2,13 @@
 
 Proyecto iOS con SwiftUI, Firebase Authentication, Cloud Firestore y Google Sign-In.
 
-## Nota
+## Funcionalidades implementadas
 
-El archivo `GoogleService-Info.plist` no se sube al repositorio. Para ejecutar la app, agrega tu copia local dentro de `Lab14IntroFirebaseServa/`.
+- Autenticación con correo/contraseña y Google.
+- Chat en Firestore.
+- Perfil de usuario con nombre, apellido y contador de mensajes.
+- Consultas Firestore: todos los posts, más populares, top 5 populares, por categoría, más nuevos y primeros 3.
+
+## Requisitos para ejecutar
+
+- Colocar `GoogleService-Info.plist` dentro de `Lab14IntroFirebaseServa/`.
