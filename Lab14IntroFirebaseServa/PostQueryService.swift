@@ -65,7 +65,14 @@ final class PostQueryService: ObservableObject {
     }
 
     func addSamplePosts() {
-        let authenticatedEmail = Auth.auth().currentUser?.email ?? "test@tecsup.edu.pe"
+        guard let authenticatedEmail = Auth.auth().currentUser?.email else {
+            errorMessage = "Debes iniciar sesión antes de insertar datos de prueba."
+            return
+        }
+
+        isLoading = true
+        queryDescription = "INSERT sample data"
+        errorMessage = nil
 
         let samplePosts: [Post] = [
             Post(
@@ -90,8 +97,8 @@ final class PostQueryService: ObservableObject {
                 category: "swift"
             ),
             Post(
-                title: "Push Notification Kotlin",
-                content: "Cómo integrar mensajería y notificaciones en apps móviles.",
+                title: "Arquitectura MVVM en Kotlin",
+                content: "Cómo separar vistas, estado y lógica en una app móvil.",
                 authorEmail: "jfarfan@tecsup.edu.pe",
                 likes: 20,
                 category: "kotlin"
@@ -105,20 +112,26 @@ final class PostQueryService: ObservableObject {
             )
         ]
 
-        errorMessage = nil
+        let batch = Firestore.firestore().batch()
 
         for (index, sample) in samplePosts.enumerated() {
-            let document = postsCollection.document()
+            let document = postsCollection.document("sample-post-\(index + 1)")
             var post = sample
             post.id = document.documentID
             post.createdAt = Date().addingTimeInterval(-Double(index * 86_400))
 
-            document.setData(post.firestoreData) { [weak self] error in
+            batch.setData(post.firestoreData, forDocument: document, merge: true)
+        }
+
+        batch.commit { [weak self] error in
+            DispatchQueue.main.async {
                 if let error {
-                    DispatchQueue.main.async {
-                        self?.errorMessage = "No se pudo insertar la data de prueba: \(error.localizedDescription)"
-                    }
+                    self?.isLoading = false
+                    self?.errorMessage = "No se pudo insertar la data de prueba: \(error.localizedDescription)"
+                    return
                 }
+
+                self?.getAllPosts()
             }
         }
     }

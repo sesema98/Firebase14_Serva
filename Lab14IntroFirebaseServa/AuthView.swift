@@ -12,8 +12,6 @@ import GoogleSignIn
 import UIKit
 
 struct AuthView: View {
-    @State private var email = ""
-    @State private var password = ""
     @State private var currentUser: User?
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -23,9 +21,9 @@ struct AuthView: View {
         NavigationStack {
             Group {
                 if let currentUser {
-                    MessagesView(currentUser: currentUser, onSignOut: signOut)
+                    TeacherHubView(currentUser: currentUser, onSignOut: signOut)
                 } else {
-                    authenticationForm
+                    loginCard
                 }
             }
         }
@@ -40,66 +38,88 @@ struct AuthView: View {
         .onDisappear {
             removeAuthStateListener()
         }
-        .onChange(of: currentUser?.uid) { _, newValue in
-            if newValue == nil {
-                email = ""
-                password = ""
-            }
-        }
     }
 
-    private var authenticationForm: some View {
-        VStack(spacing: 24) {
-            Spacer()
+    private var loginCard: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.10, green: 0.11, blue: 0.14),
+                    Color(red: 0.04, green: 0.05, blue: 0.07)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 12) {
-                Text("Lab 14")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+            VStack {
+                Spacer()
 
-                Text("Autenticacion con Firebase")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-            }
+                VStack(spacing: 24) {
+                    Circle()
+                        .fill(Color(red: 0.16, green: 0.73, blue: 0.56).opacity(0.18))
+                        .frame(width: 86, height: 86)
+                        .overlay {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(Color(red: 0.16, green: 0.73, blue: 0.56))
+                        }
 
-            VStack(spacing: 16) {
-                TextField("Correo institucional", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    VStack(spacing: 10) {
+                        Text("DocenteHub")
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
 
-                SecureField("Contrasena", text: $password)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
+                        Text("Horarios y docentes en una sola conversación.")
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.68))
+                    }
 
-            VStack(spacing: 12) {
-                Button("Sign In") {
-                    signIn()
+                    VStack(alignment: .leading, spacing: 12) {
+                        loginFeatureRow("Consulta horarios por docente, curso o aula.")
+                        loginFeatureRow("Explora el directorio y filtra por departamento.")
+                        loginFeatureRow("Configura tu servidor IA una sola vez.")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .background(Color.white.opacity(0.08))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+
+                    Button("Continuar con Google") {
+                        signInWithGoogle()
+                    }
+                    .buttonStyle(GoogleButtonStyle())
                 }
-                .buttonStyle(PrimaryButtonStyle())
-
-                Button("Sign Up") {
-                    signUp()
+                .padding(24)
+                .background(Color.white.opacity(0.04))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 32)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
                 }
-                .buttonStyle(SecondaryButtonStyle())
+                .clipShape(RoundedRectangle(cornerRadius: 32))
 
-                Button("Sign In with Google") {
-                    signInWithGoogle()
-                }
-                .buttonStyle(GoogleButtonStyle())
+                Spacer()
             }
-
-            Spacer()
         }
         .padding(.horizontal, 24)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func loginFeatureRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color(red: 0.16, green: 0.73, blue: 0.56))
+                .padding(.top, 2)
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+        }
     }
 
     private func setUpAuthStateListener() {
@@ -121,36 +141,6 @@ struct AuthView: View {
 
         Auth.auth().removeStateDidChangeListener(authStateListener)
         self.authStateListener = nil
-    }
-
-    private func signIn() {
-        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard validateFields(email: trimmedEmail, password: password) else {
-            return
-        }
-
-        Auth.auth().signIn(withEmail: trimmedEmail, password: password) { _, error in
-            if let error {
-                presentAlert(message: error.localizedDescription)
-            }
-        }
-    }
-
-    private func signUp() {
-        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard validateFields(email: trimmedEmail, password: password) else {
-            return
-        }
-
-        Auth.auth().createUser(withEmail: trimmedEmail, password: password) { _, error in
-            if let error {
-                presentAlert(message: error.localizedDescription)
-            } else {
-                presentAlert(message: "Usuario registrado correctamente en Firebase Authentication.")
-            }
-        }
     }
 
     private func signOut() {
@@ -202,20 +192,6 @@ struct AuthView: View {
                 }
             }
         }
-    }
-
-    private func validateFields(email: String, password: String) -> Bool {
-        guard !email.isEmpty, !password.isEmpty else {
-            presentAlert(message: "Completa el correo y la contrasena.")
-            return false
-        }
-
-        guard password.count >= 6 else {
-            presentAlert(message: "Firebase requiere una contrasena de al menos 6 caracteres.")
-            return false
-        }
-
-        return true
     }
 
     private func presentAlert(message: String) {
@@ -270,14 +246,14 @@ struct GoogleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(maxWidth: .infinity)
-            .foregroundStyle(.primary)
+            .foregroundStyle(.black)
             .padding()
             .background(Color.white)
             .overlay {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.gray.opacity(0.35), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }

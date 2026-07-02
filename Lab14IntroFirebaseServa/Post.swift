@@ -18,7 +18,7 @@ struct Post: Identifiable, Hashable {
     var isPublished: Bool
     var createdAt: Date
 
-    init(
+    nonisolated init(
         id: String = UUID().uuidString,
         title: String,
         content: String,
@@ -62,7 +62,7 @@ struct Post: Identifiable, Hashable {
         .updated(isPublished: isPublished, createdAt: createdAt)
     }
 
-    var firestoreData: [String: Any] {
+    nonisolated var firestoreData: [String: Any] {
         [
             "title": title,
             "content": content,

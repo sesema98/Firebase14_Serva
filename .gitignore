@@ -7,3 +7,5 @@ xcuserdata/
 # Firebase local config
 GoogleService-Info.plist
 Lab14IntroFirebaseServa/GoogleService-Info.plist
+
+# Local AI configuration remains in the simulator/device
